@@ -15,7 +15,7 @@ from setuptools import setup
 
 setup(
   name = 'CSTB_core',
-  version = '1.0',
+  version = '1.1',
   license='BSD',
   description = 'Utility function for io and word searching and indexing',
   author = 'Guillaume Launay, Cecile Hilpert',
@@ -27,10 +27,10 @@ setup(
   zip_safe=False,
   py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
   download_url = 'https://github.com/MMSB-MOBI/CSTB_core/tarball/0.1', # I'll explain this in a second
-  keywords = ['crispr', 'webserver'], # arbitrary keywords
+  keywords = ['crispr', 'webserver', 'word encoding'], # arbitrary keywords
   classifiers = [],
   install_requires=[
-          'docopt', 'biopython'
+          'docopt', 'biopython', 'twobits'
       ]
   #data_files=[
   #          ('external', ['external/pathos.tar.bz']),
