@@ -15,7 +15,7 @@ from setuptools import setup
 
 setup(
   name = 'CSTB_core',
-  version = '1.1',
+  version = '1.2',
   license='BSD',
   description = 'Utility function for io and word searching and indexing',
   author = 'Guillaume Launay, Cecile Hilpert',
