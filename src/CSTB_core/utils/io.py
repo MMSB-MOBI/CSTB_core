@@ -165,3 +165,56 @@ def zFastaReader(filePath):
             ref = genome_seqrecord.id
             header = genome_seqrecord.description
             yield(str(header), str(genome_seq), str(ref))
+
+
+
+def sgRNAIndexWriter(data, fname, wLen, mode='w'):
+    bOcc = None
+    with open(fname, mode) as fp:
+        fp.write(f"# {len(data)} {wLen}\n")
+        for datum in data:
+            if bOcc is None:
+                bOcc = guessOccurenceFormat(datum)
+            if bOcc:
+                fp.write( ' '.join([str(d) for d in datum]) + "\n")
+            else:
+                fp.write(str(datum) + "\n")
+    return len(data)
+
+def sgRNAIndexReader(indexFilePath):
+    skipFirst = True
+    with open(indexFilePath, 'r') as fp:    
+        for l in fp:
+            _ = l.split()
+            if skipFirst:
+                if not l.startswith("#"):
+                    raise IOError(f"Irregular header line in index file \"{l}\"")
+                skipFirst = False
+                yield ( int(_[2]), None )
+                continue
+            if len(_) != 1 and  len(_) != 2:
+                raise IOError(f"Irregular line in index file \"{l}\"")
+            yield ( int(_[0]), None if len(_) == 1 else int(_[1]) )
+
+def sgRNAplainWriter(data, fname, mode= 'w'):
+    bOcc = None
+    with open(fname, mode) as fp:
+        fp.write(str(len(data)) + "\n")
+
+        for datum in data:
+            if bOcc is None:
+                bOcc = guessOccurenceFormat(datum)
+            if bOcc:
+                fp.write( ' '.join([str(d) for d in datum]) + "\n")
+            else:
+                fp.write(str(datum) + "\n")
+    return len(data) 
+
+
+def guessOccurenceFormat(datum):
+    if datum[1] is None:
+        print("Writing index in no occurence format")
+        return False
+    
+    print("Writing index in occurences format")
+    return True

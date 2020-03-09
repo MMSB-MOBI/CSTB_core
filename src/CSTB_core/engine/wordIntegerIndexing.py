@@ -1,26 +1,29 @@
 """
     Translate a dictionary of constant-length CRISPR motifs into an ordered set of integer, using base4 encoding.
     Usage:
-        wordIntegerIndexing.py <pickledDictionary> [--dbase] [--out=<outFile> --occ]
-        wordIntegerIndexing.py reverse <motifLength> <indexedFile> [--dbase]
+        wordIntegerIndexing.py code <pickledDictionary> [--dbase] [--out=<outFile> --occ]
+        wordIntegerIndexing.py decode <indexedFile> [--dbase] [--out=<outFile>]
+        wordIntegerIndexing.py translate <indexedFile> [--dbase] [--out=<outFile>]
 
     Options:
         -h --help                               Show this screen
-        -o <outFile>, --out <outFile>           Name of the output file [default : ./pickledDictionary.index]
-        --dbase,                                Switch to power of two encoder, default is twobits
+        --occ                                   notify the number of occurence of each word           
+        -o <outFile>, --out <outFile>          Name of the output file [default : ./pickledDictionary.index]
+        --dbase                                 Switch to power of two encoder, default is twobits
 """
 
 import os
 import pickle
 import math
 import twobits
+from CSTB_core.utils.io import sgRNAplainWriter, sgRNAIndexReader, sgRNAIndexWriter
 from docopt import docopt
 
 ENCODER=twobits.encode
 DECODER=twobits.decode
+CODEC='twobits'
 
-def occWeight(data):
-    k,datum = data
+def occWeight(k,datum):
     n = 0
     for o in datum:
         for _o in datum[o]:
@@ -28,42 +31,34 @@ def occWeight(data):
     #print(k,n)
     return n
 
-# same as index pickle, coding and order wise, 
-# we just add a second field to each wordCode line, the occurence number
-def indexAndOccurencePickle(file_path, target_file):
+# we may add a second field to each wordCode line, the occurence number
+def indexAndMayOccurence(data, occ=True):
     global ENCODER
-    p_data = pickle.load(open(file_path, "rb"))
-    word_list = list(p_data.keys())
-    print(f"Encoding what seems like {len(word_list[0])} length words")
-    data = sorted( [ ( ENCODER(w), occWeight((w, p_data[w])) ) for w in word_list], key=lambda x: x[0])
-    with open(target_file, "w") as filout:
-        filout.write(str(len(data)) + "\n")
-        for datum in data:
-            filout.write( ' '.join([str(d) for d in datum]) + "\n")
-
-    return len(data)
-
-# same as index pickle, coding and order wise, 
-# we just add a second field to each wordCode line, the occurence number
-def indexAndOccurence(data):
     word_list = list(data.keys())
-    data = sorted( [ ( ENCODER(w), occWeight((w, data[w])) ) for w in word_list], key=lambda x: x[0])
-    return data
+    wLen = len(word_list[0])
+    print(f"Encoding what seems like {wLen} length words")
     
-def indexPickle(file_path, target_file):
-    """
-    Take a pickle file, code it and write it in a file
-    """
-    global ENCODER
-    p_data = pickle.load(open(file_path, "rb"))
-    word_list = list(p_data.keys())
-    data = sorted([ ENCODER(w) for w in word_list])
-    with open(target_file, "w") as filout:
-        filout.write(str(len(data)) + "\n")
-        for coding_int in data:
-            filout.write(str(coding_int) + "\n")
+    indexData = []
+    for w in word_list:
+        if len(w) != wLen:
+            raise IOError(f"Not even size word to encode {len(w)} != {wLen}")
+        _ = ( ENCODER(w), occWeight(w, data[w]) ) if occ else ENCODER(w)
+        indexData.append( _ )
+        
+    indexData =  sorted(indexData , key=lambda x: x[0] ) if occ else sorted(indexData)
+    return indexData, wLen
 
-    return len(data)
+# Read a pickle sgRNA dictionary encodes its keys   
+def indexFromPickle(file_path, occ=True):
+    p_data = pickle.load(open(file_path, "rb"))
+    data, wLen = indexAndMayOccurence(p_data,  occ=occ)
+
+    return data, wLen
+
+def translate(data):
+    global ENCODER   
+    return [ (  ENCODER(word), mayOcc ) for word, mayOcc in data ]
+
 
 def pow2encoderWrapper(word):
     return weightWord( word, "ATCG", length=len(word) )
@@ -110,52 +105,89 @@ def decode(rank, alphabet, length=20):
         rank = rank % pow(base, i)
     return word
 
-def writeIndexes(indexData, output):
-    with open(output, "w") as o:
-        o.write(f"{len(indexData)}\n")
-        for datum in indexData:
-            o.write(f"{' '.join([str(d) for d in datum])}\n")
-
-def reverse(indexFilePath, motifLength, skipFirst=True):
-    with open(indexFilePath, 'r') as fp:    
-        for l in fp:
-            if skipFirst:
-                skipFirst = False
+def reverse(indexFilePath):
+    data = []
+    motifLength=None
+    #motifLength = sgRNAIndexReader(indexFilePath)
+   
+    for interCode, mayOccurence in sgRNAIndexReader(indexFilePath):
+            if motifLength is None:
+                motifLength = interCode
+                print (f"Detected word Length is {motifLength}")
                 continue
-            _ = l.split()           
             try :
-                s = DECODER( int(_[0]), motifLength )
+                s = DECODER( interCode, motifLength )
             except AssertionError:
-                print(f"Can't decode {_[0]}. Specified motif length {motifLength} is probably too short")
+                print(f"Can't decode {interCode}. Specified motif length {motifLength} is probably too short")
                 return
-            print(s)
+            data.append( (s, mayOccurence) )
+    return data, motifLength
 
 def toggleEncoding():
     global ENCODER
     global DECODER
-    ENCODER = pow2encoderWrapper
-    DECODER = pow2decoderWrapper
-    
+    global CODEC
+
+    if CODEC == 'twobits':
+        ENCODER = pow2encoderWrapper
+        DECODER = pow2decoderWrapper
+        CODEC = 'pow2'
+    else :      
+        ENCODER = twobits.encode
+        DECODER = twobits.decode
+        CODEC = 'twobits'
+
+    print(f"Toggling to {CODEC} encoding")
+    return CODEC
+
 if __name__ == "__main__":
     
     ARGUMENTS = docopt(__doc__, version='wordIntegerIndexing 1.0')
 
     if ARGUMENTS['--dbase']:
-        print("Toggling to pow2 encoding")
         toggleEncoding()
 
-    if ARGUMENTS['reverse']:
-        reverse(ARGUMENTS['<indexedFile>'], int(ARGUMENTS["<motifLength>"]))
-        exit(1)
+    targetFile =  ARGUMENTS['--out'] if ARGUMENTS['--out'] else None
+            
+    # Reading sgRNA words, writing integers
+    if ARGUMENTS['code']:
+        dataEncoded, wLen = indexFromPickle(ARGUMENTS['<pickledDictionary>'], ARGUMENTS['--occ'])
 
-    TARGET_FILE = ('.'.join(os.path.basename(ARGUMENTS['<pickledDictionary>']).split('.')[0:-1])
-                   + '.index')
-    if ARGUMENTS['--out']:
-        TARGET_FILE = ARGUMENTS['--out']
-    
-    indexFn = indexPickle
-    if ARGUMENTS['--occ']:
-        indexFn = indexAndOccurencePickle
-    TOTAL = indexFn(ARGUMENTS['<pickledDictionary>'], TARGET_FILE)
-    print("Successfully indexed", TOTAL, "words\nfrom:",
-          ARGUMENTS['<pickledDictionary>'], "\ninto:", TARGET_FILE)
+        if not targetFile:
+            targetFile = ('.'.join(os.path.basename(ARGUMENTS['<pickledDictionary>']).split('.')[0:-1])
+                    + '.index')
+        sgRNAIndexWriter(dataEncoded, targetFile, wLen)    
+
+        print(f"Successfully indexed {len(dataEncoded)} words of size {wLen}\nfrom:",
+              f"{ARGUMENTS['<pickledDictionary>']}\ninto:{targetFile}"
+              )
+        exit(0)
+
+    # Reading integers words, writing sgRNA
+    if ARGUMENTS['decode']:
+        dataWords, wLen = reverse(ARGUMENTS['<indexedFile>'])
+        if not targetFile:
+            targetFile = ('.'.join(os.path.basename(ARGUMENTS['<indexedFile>']).split('.')[0:-1])
+                    + '_decoded.motif')
+        sgRNAplainWriter(dataWords, targetFile)
+
+        print("Successfully decoded", len(dataWords), "words\nfrom:",
+            ARGUMENTS['<indexedFile>'], "\ninto:", targetFile)
+        exit(0)
+
+     # Reading integers words, writing integers code
+    if ARGUMENTS['translate']:
+        codecFrom=CODEC
+        sgRNAdecoded, wLen = reverse(ARGUMENTS['<indexedFile>'])
+        toggleEncoding()
+        translatedEncoding = translate(sgRNAdecoded)
+        if not targetFile:
+            targetFile = ('.'.join(os.path.basename(ARGUMENTS['<indexedFile>']).split('.')[0:-1])
+                    + '_translated.index')
+        sgRNAIndexWriter(translatedEncoding, targetFile, wLen)
+
+        print( (f"Successfully translated{len(translatedEncoding)} words\n"
+                f"from:\"{ARGUMENTS['<indexedFile>']}\"({codecFrom})\n"
+                f"into:\"{targetFile}\"({CODEC})")
+        )
+        exit(0)
