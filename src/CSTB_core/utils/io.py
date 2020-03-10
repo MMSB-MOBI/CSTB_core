@@ -168,10 +168,10 @@ def zFastaReader(filePath):
 
 
 
-def sgRNAIndexWriter(data, fname, wLen, mode='w'):
+def sgRNAIndexWriter(data, fname, wLen, codec, mode='w'):
     bOcc = None
     with open(fname, mode) as fp:
-        fp.write(f"# {len(data)} {wLen}\n")
+        fp.write(f"# {len(data)} {wLen} {codec}\n")
         for datum in data:
             if bOcc is None:
                 bOcc = guessOccurenceFormat(datum)
@@ -190,7 +190,7 @@ def sgRNAIndexReader(indexFilePath):
                 if not l.startswith("#"):
                     raise IOError(f"Irregular header line in index file \"{l}\"")
                 skipFirst = False
-                yield ( int(_[2]), None )
+                yield ( int(_[2]), _[3] )
                 continue
             if len(_) != 1 and  len(_) != 2:
                 raise IOError(f"Irregular line in index file \"{l}\"")

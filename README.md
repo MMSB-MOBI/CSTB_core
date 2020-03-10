@@ -19,14 +19,14 @@ The `--occ` flags is to account for the number of occurences of each word, displ
 Here is a sample of the ouput file,
 
 ```text
-# 704200 23
+# 704200 23 twobits
 233379311 1
 3579170655 1
 4245510159 1
 4652947967 1
 ````
 
-The header line shows the total number of words encoded and the nucleotide-length of the words.
+The header line shows the total number of words encoded, the nucleotide-length of the words and code used.
 
 Toggle to **power of two encoding**, with the `--dbase` flag,
 
@@ -37,7 +37,7 @@ python wordIntegerIndexing.py code 1a26fb6786e323a436d12439f42b0afa.p \
 ```
 
 Which will output encoded words in a similar format.
-In all outputs, words/integer are sorted numerically ascending according to their integer representation.
+In all outputs, words/integer are sorted numerically ascending by their integer representation.
 
 ### Decoding from an encoded sgRNAs index file
 

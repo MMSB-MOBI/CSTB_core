@@ -2,8 +2,8 @@
     Translate a dictionary of constant-length CRISPR motifs into an ordered set of integer, using base4 encoding.
     Usage:
         wordIntegerIndexing.py code <pickledDictionary> [--dbase] [--out=<outFile> --occ]
-        wordIntegerIndexing.py decode <indexedFile> [--dbase] [--out=<outFile>]
-        wordIntegerIndexing.py translate <indexedFile> [--dbase] [--out=<outFile>]
+        wordIntegerIndexing.py decode <indexedFile> [--out=<outFile>]
+        wordIntegerIndexing.py translate <indexedFile> [--out=<outFile>]
 
     Options:
         -h --help                               Show this screen
@@ -136,17 +136,20 @@ def reverse(indexFilePath):
     motifLength=None
     #motifLength = sgRNAIndexReader(indexFilePath)
    
-    for interCode, mayOccurence in sgRNAIndexReader(indexFilePath):
+    for interCode, mayOccurenceOrCodec in sgRNAIndexReader(indexFilePath):
             if motifLength is None:
                 motifLength = interCode
+                codec = mayOccurenceOrCodec
                 print (f"Detected word Length is {motifLength}")
+                setEncoding(codec)
                 continue
+            occurence = mayOccurenceOrCodec
             try :
                 s = DECODER( interCode, motifLength )
             except AssertionError:
                 print(f"Can't decode {interCode}. Specified motif length {motifLength} is probably too short")
                 return
-            data.append( (s, mayOccurence) )
+            data.append( (s, occurence) )
     return data, motifLength
 
 def toggleEncoding():
@@ -166,6 +169,23 @@ def toggleEncoding():
     print(f"Toggling to {CODEC} encoding")
     return CODEC
 
+def setEncoding(newCodec):
+    global ENCODER
+    global DECODER
+    global CODEC
+
+    if newCodec == 'twobits':
+        ENCODER = twobits.encode
+        DECODER = twobits.decode
+    elif newCodec == 'pow2' :      
+        ENCODER = pow2encoderWrapper
+        DECODER = pow2decoderWrapper
+    else:
+        raise TypeError(f"Unknown codec {newCodec}")
+    
+    CODEC = 'twobits'
+    print(f"Setting to {CODEC} encoding")
+
 if __name__ == "__main__":
     
     ARGUMENTS = docopt(__doc__, version='wordIntegerIndexing 1.0')
@@ -182,10 +202,11 @@ if __name__ == "__main__":
         if not targetFile:
             targetFile = ('.'.join(os.path.basename(ARGUMENTS['<pickledDictionary>']).split('.')[0:-1])
                     + '.index')
-        sgRNAIndexWriter(dataEncoded, targetFile, wLen)    
+        sgRNAIndexWriter(dataEncoded, targetFile, wLen, CODEC)    
 
-        print(f"Successfully indexed {len(dataEncoded)} words of size {wLen}\nfrom:",
+        print(f"Successfully indexed {len(dataEncoded)} words of size {wLen}\nfrom:"
               f"{ARGUMENTS['<pickledDictionary>']}\ninto:{targetFile}"
+              f" with codec {CODEC}"
               )
         exit(0)
 
@@ -197,8 +218,10 @@ if __name__ == "__main__":
                     + '_decoded.motif')
         sgRNAplainWriter(dataWords, targetFile)
 
-        print("Successfully decoded", len(dataWords), "words\nfrom:",
-            ARGUMENTS['<indexedFile>'], "\ninto:", targetFile)
+        print(f"Successfully decoded {len(dataWords)} words\nfrom:"
+              f"{ARGUMENTS['<indexedFile>']}\ninto:{targetFile}"
+              f" with codec {CODEC}"
+              )
         exit(0)
 
      # Reading integers words, writing integers code
@@ -210,7 +233,7 @@ if __name__ == "__main__":
         if not targetFile:
             targetFile = ('.'.join(os.path.basename(ARGUMENTS['<indexedFile>']).split('.')[0:-1])
                     + '_translated.index')
-        sgRNAIndexWriter(translatedEncoding, targetFile, wLen)
+        sgRNAIndexWriter(translatedEncoding, targetFile, wLen, CODEC)
 
         print( (f"Successfully translated{len(translatedEncoding)} words\n"
                 f"from:\"{ARGUMENTS['<indexedFile>']}\"({codecFrom})\n"
