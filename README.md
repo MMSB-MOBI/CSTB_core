@@ -70,8 +70,34 @@ python wordIntegerIndexing.py decode test_pow2.index /
                             --dbase
 ```
 
-## Using module function
+## Using module functions
+The default codec is **two-bits per base**. 
 
+The two codec can produce identical integer representations.
+```python
+import CSTB_core.engine.wordIntegerIndexing as kmer
+kmer.encode('GGGGGGGGGGGGGGGGGGGGGGG')
+#70368744177663
+kmer.encode('GGGGGGGGGGGGGGGGGGGGGGG', codec='pow2')
+#70368744177663
+kmer.decode(70368744177663, 23)
+#'GGGGGGGGGGGGGGGGGGGGGGG'
+kmer.decode(70368744177663, 23, codec='pow2')
+#'GGGGGGGGGGGGGGGGGGGGGGG'
+```
+
+But not always,
+```python
+import CSTB_core.engine.wordIntegerIndexing as kmer
+kmer.encode('AAAAAAAAAGCGTTCACCCGTGG')
+#233379311
+kmer.encode('AAAAAAAAAGCGTTCACCCGTGG', codec='pow2')
+#248916703
+kmer.decode(233379311, 23)
+#'AAAAAAAAAGCGTTCACCCGTGG'
+kmer.decode(248916703, 23, codec='pow2')
+#'AAAAAAAAAGCGTTCACCCGTGG'
+```
 
 
 ## TO rework BELOW

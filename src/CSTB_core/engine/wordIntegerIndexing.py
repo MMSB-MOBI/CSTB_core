@@ -23,6 +23,32 @@ ENCODER=twobits.encode
 DECODER=twobits.decode
 CODEC='twobits'
 
+
+def encode(word, codec='twobits'):
+    if codec == 'twobits':
+        fn = twobits.encode
+    elif codec == 'pow2':
+        fn = pow2encoderWrapper
+    else:
+        raise TypeError(f"Unknown codec \"{codec}\"")
+
+    if len(word) > 32:
+        raise ValueError(f"Word can't be encoded, too long ({len(word)}> 32).")
+
+    return fn(word)
+
+def decode(value, wLen, codec='twobits'):
+    if codec == 'twobits':
+        fn = twobits.decode
+    elif codec == 'pow2':
+        fn = pow2decoderWrapper
+    else:
+        raise TypeError(f"Unknown codec \"{codec}\"")
+
+    if wLen > 32:
+        raise ValueError(f"Word can't be decoded, too long ({wLen}> 32).")
+    return fn(value, wLen)
+
 def occWeight(k,datum):
     n = 0
     for o in datum:
@@ -90,9 +116,9 @@ def project(value, lenFrom, lenTo, alphabet="ATCG"):
     return _value - offset
 
 def pow2decoderWrapper(code, wLen):
-    return decode(code, "ATCG", length=wLen)
+    return pow2Decoder(code, "ATCG", length=wLen)
 
-def decode(rank, alphabet, length=20):
+def pow2Decoder(rank, alphabet, length=20):
     """
     Decode the rank (int) to a word according to an alphabet given
     """
