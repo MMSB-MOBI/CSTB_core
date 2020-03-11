@@ -42,7 +42,7 @@ In all outputs, words/integer are sorted numerically ascending by their integer 
 ### Decoding from an encoded sgRNAs index file
 
 Decoding is triggered by the use of the **decode** first positional argument.
-Similarly to encoding, the programms assumes that the **two bits per base encoding** was used to encode the data.
+Codec will be automatically ead from the provided sgRNA index file.
 
 ```sh
 python wordIntegerIndexing.py decode test_twobits.index /
@@ -60,19 +60,32 @@ AAAAAACACCCCCCTCCTCGGGG 1
 AAAAAACCGCTGGAAAGCGTTGG 1
 ```
 
-The header line shows the total number of decoded words.
+The header line shows the total number of decoded words. Following lines shows the sgRNA words and thei occurences.
 
-Use the `--dbase` flag to toggle to the **pow2 decoder**.
+### Translating sgRNA index from one codec to another
+
+The conversion between the integer coding schemes is triggered by the use of the **translate** first positional argument.
+Input codec will be automatically read from the provided sgRNA index file and the outpout codec guessed accordingly.
 
 ```sh
-python wordIntegerIndexing.py decode test_pow2.index /
-                            --out decoded_from_pow2.motifs
-                            --dbase
+python wordIntegerIndexing.py translate test_twobits.index /
+                            --out pow2_from_twobits.motifs
+```
+
+The output is similar to a `python wordIntegerIndexing.py code` call, with a toggled codec. Here is a sample,
+
+```text
+# 704200 23 pow2
+179924927 1
+165118735 1
+717157295 1
+660474943 1
 ```
 
 ## Using module functions
-The default codec is **two-bits per base**. 
+Most features of the CLI are available through the import of the ``CSTB_core.engine.wordIntegerIndexing`` module.
 
+The default codec is **two-bits per base**.
 The two codec can produce identical integer representations.
 ```python
 import CSTB_core.engine.wordIntegerIndexing as kmer
@@ -87,6 +100,7 @@ kmer.decode(70368744177663, 23, codec='pow2')
 ```
 
 But not always,
+
 ```python
 import CSTB_core.engine.wordIntegerIndexing as kmer
 kmer.encode('AAAAAAAAAGCGTTCACCCGTGG')
@@ -97,42 +111,4 @@ kmer.decode(233379311, 23)
 #'AAAAAAAAAGCGTTCACCCGTGG'
 kmer.decode(248916703, 23, codec='pow2')
 #'AAAAAAAAAGCGTTCACCCGTGG'
-```
-
-
-## TO rework BELOW
-
-
-### By default in twobits
-
-```sh
-python wordIntegerIndexing.py <myPickle> --occ -o test_2bits.index
-``` 
-
-### Using the pow of 2 encoder
-
-```sh
-python wordIntegerIndexing.py <myPickle> --occ -o test_pow2.index --dbase
-```
-
-## Decoding from unsigned 64 integers
-
-### By default in twobits
-
-```sh
-python wordIntegerIndexing.py reverse 23 test_2bits.index >! motif_2bits.bak
-```
-
-### Using the pow of 2 decoder
-
-```sh
-python wordIntegerIndexing.py reverse 23 test_pow2.index --dbase >! motif_pow2.bak
-```
-
-## Assess operation reciprocity & egality
-
-Following command should be mute
-
-```sh
-diff <(sort motif_2bits.bak) <(sort motif_pow2.bak)
 ```
