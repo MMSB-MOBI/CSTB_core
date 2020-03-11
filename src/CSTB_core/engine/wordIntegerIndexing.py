@@ -169,6 +169,12 @@ def toggleEncoding():
     print(f"Toggling to {CODEC} encoding")
     return CODEC
 
+def getEncoding():
+    global ENCODER
+    global DECODER
+    global CODEC
+    return (CODEC, ENCODER, DECODER)
+
 def setEncoding(newCodec):
     global ENCODER
     global DECODER
