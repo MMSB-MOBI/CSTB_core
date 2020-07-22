@@ -104,7 +104,7 @@ def sgRNAfastaSearch(fasta_file, organism, pam="NGG", non_pam_motif_length=20):
     #for genome_seqrecord in SeqIO.parse(fasta_file, "fasta"):
     with zFile(fasta_file) as handle:
         for genome_seqrecord in SeqIO.parse(handle, "fasta"):
-            genome_seq = genome_seqrecord.seq
+            genome_seq = genome_seqrecord.seq.upper()
             if len(genome_seq) < word_length:
                 return {}
             ref = genome_seqrecord.id
